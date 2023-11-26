@@ -714,6 +714,7 @@ async function _display() {
 
   $('span').show();
   $('#tools, #saveNifti, #loadSelection, #saveSelection, #loadMatrix, #appendMatrix, #saveMatrix, #resetMatrix, #resetSelection, #info').show();
+  $('#footer').hide();
   $('#buttons').removeClass('init');
   $('#loadNifti').removeClass('mui-no-border');
 }

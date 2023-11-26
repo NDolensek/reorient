@@ -46,4 +46,16 @@ body {
   width: 80%;
   height: 80%;
 }
-
+#footer {
+  font-family: "Montserrat", sans-serif;
+  font-size: 12px;
+  font-weight: 200;
+  line-height:1.4;
+  color: white;
+  position: absolute;
+  bottom:2%;
+  left:50%;
+  transform: translate( -50%, 0% );
+  text-align: center;
+  width: 80%;
+}
