@@ -5,25 +5,17 @@
  */
 const globals = {
   mouseIsDown: false,
-  // Global variable that keeps track of the tool used: Translate, Rotate or Select
-  // (set to Translate by default).
   selectedTool: 'Translate',
   defaultCropBox: {
-    min: {
-      x: -20,
-      y: -20,
-      z: -20
-    },
-    max: {
-      x: 20,
-      y: 20,
-      z: 20
-    }
+      min: {x: -20, y: -20, z: -20},
+      max: {x: 20, y: 20, z: 20}
   },
   cropBox: {},
   mv: null,
   origMatrix: null,
-  prevMatrix: null
+  prevMatrix: null,
+  layers: [], // Array to store MRI viewers
+  isReference: true // Flag to track if next upload is reference
 };
 window.globals = globals;
 
@@ -44,6 +36,21 @@ function matrix2str(matrix) {
   }).join('\n');
 
   return str;
+}
+
+function switchLayers() {
+  if (globals.layers.length < 2) return;
+  
+  // Swap array elements
+  [globals.layers[0], globals.layers[1]] = [globals.layers[1], globals.layers[0]];
+  
+  // Update mv to point to top layer for transformations
+  globals.mv = globals.layers[1];
+  
+  // Redraw all views with new layer order
+  for (const layer of globals.layers) {
+      layer.draw();
+  }
 }
 
 function printInfo() {
@@ -682,39 +689,39 @@ async function _display() {
   const {mv} = globals;
 
   try {
-    await mv.display(updateProgress);
+      await mv.display(updateProgress);
   } catch(err) {
-    throw new Error(err);
+      throw new Error(err);
   }
 
-  // Save the original matrix for reset
-  globals.origMatrix = JSON.parse(JSON.stringify(mv.mri.MatrixMm2Vox));
-
-  // Add click event listeners
-  for(let ii=0; ii<mv.views.length; ii++) {
-    (function(i) {
-      mv.views[i].canvas.addEventListener('mousedown', (e) => mouseDown(mv.views[i], e));
-      mv.views[i].canvas.addEventListener('mousemove', (e) => mouseMove(mv.views[i], e));
-      mv.views[i].canvas.addEventListener('mouseup', (e) => mouseUp(mv.views[i], e));
-    }(ii));
+  // Save original matrix only for new layers
+  if (!mv.origMatrix) {
+      mv.origMatrix = JSON.parse(JSON.stringify(mv.mri.MatrixMm2Vox));
   }
 
-  // Add an overlay for the cropping
-  for(let ii=0; ii<mv.views.length; ii++) {
-    $(mv.views[ii].elem).find('.wrap')
-      .append(`<div class='overlay' id='overlay${ii}'>`);
-    (function(i) {
-      MUI.crop(`#overlay${i}`, (box) => { updateCropBoxFromOverlay(mv.views[i], box); });
-    }(ii));
+  // Only add mouse handlers if this isn't the reference layer
+  if (!globals.isReference) {
+      for(let i=0; i<mv.views.length; i++) {
+          mv.views[i].canvas.addEventListener('mousedown', (e) => mouseDown(mv.views[i], e));
+          mv.views[i].canvas.addEventListener('mousemove', (e) => mouseMove(mv.views[i], e));
+          mv.views[i].canvas.addEventListener('mouseup', (e) => mouseUp(mv.views[i], e));
+      }
+  }
+
+  // Add overlay for the cropping
+  for(let i=0; i<mv.views.length; i++) {
+      $(mv.views[i].elem).find('.wrap')
+          .append(`<div class='overlay' id='overlay${i}'>`);
+      MUI.crop(`#overlay${i}`, (box) => { 
+          updateCropBoxFromOverlay(mv.views[i], box); 
+      });
   }
   updateOverlaysFromCropBox();
-
-  // print transformation matrix
   printInfo();
 
+  // Show UI elements after first file is loaded
   $('span').show();
   $('#tools, #saveNifti, #loadSelection, #saveSelection, #loadMatrix, #appendMatrix, #saveMatrix, #resetMatrix, #resetSelection, #info').show();
-  $('#footer').hide();
   $('#buttons').removeClass('init');
   $('#loadNifti').removeClass('mui-no-border');
 }
@@ -739,12 +746,40 @@ async function initWithPath(path) {
  * @param {object} file File object
  */
 async function init(file) {
+  if (globals.layers.length >= 2) {
+      alert('Maximum of 2 scans supported. Please refresh to start over.');
+      return;
+  }
+
   _initCropBox();
-  _newMRIViewer({file: file});
+  
+  // Create new viewer
+  const viewer = new MRIViewer({
+      mriFile: file,
+      mriPath: null,
+      space: "absolute",
+      views: [
+          { elem: $('#viewer1').get(0), plane: 'sag' },
+          { elem: $('#viewer2').get(0), plane: 'cor' },
+          { elem: $('#viewer3').get(0), plane: 'axi' }
+      ]
+  });
+
+  // Add to layers array
+  if (globals.isReference) {
+      globals.layers.unshift(viewer); // Reference goes at bottom
+      globals.isReference = false;
+  } else {
+      globals.layers.push(viewer);
+      $('#switchLayers').show(); // Show layer switch button after second scan
+  }
+  
+  globals.mv = viewer; // Set as current viewer
+
   try {
-    await _display();
+      await _display();
   } catch(err) {
-    throw new Error(err);
+      throw new Error(err);
   }
 }
 
@@ -762,7 +797,7 @@ function selectTool(option) {
  * @param {object} MUI Reference to UI widgets
  */
 function initUI(MUI) {
-  // Initialise UI
+  // Existing UI initialization
   MUI.chose($('#tools'), selectTool);
   MUI.push($('#loadNifti'), loadNifti);
   MUI.push($('#saveNifti'), saveNifti);
@@ -773,6 +808,5 @@ function initUI(MUI) {
   MUI.push($('#saveSelection'), saveSelection);
   MUI.push($('#resetMatrix'), resetMatrix);
   MUI.push($('#resetSelection'), resetSelection);
-
-  // selectTool("Select");
+  MUI.push($('#switchLayers'), switchLayers);
 }

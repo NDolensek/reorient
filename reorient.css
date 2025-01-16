@@ -59,3 +59,18 @@ body {
   text-align: center;
   width: 80%;
 }
+#switchLayers {
+  display: none; /* Hidden by default until second scan is loaded */
+}
+.box.has-reference .box_input strong:after {
+  content: "add scan to register";
+  font-weight: normal;
+  font-size: 14px;
+  display: block;
+  margin-top: 5px;
+}
+/* Add visual feedback for layer switching */
+.box.is-switching {
+  opacity: 0.8;
+  transition: opacity 0.2s ease-in-out;
+}
