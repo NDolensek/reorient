@@ -2,12 +2,13 @@
   "name": "reorient",
   "version": "1.0.0",
   "description": "A tool for reorienting and cropping MRI data",
-  "main": "reorient.js",
+  "main": "src/main.js",
   "directories": {
     "lib": "lib"
   },
   "scripts": {
-    "test": "http-server . & sleep 2 && mocha --exit"
+    "test": "http-server . & sleep 2 && mocha --exit",
+    "start": "node server.js"
   },
   "repository": {
     "type": "git",

@@ -213,37 +213,7 @@
     <link href="https://fonts.googleapis.com/css?family=Roboto+Mono:100" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css?family=Montserrat:200,500" rel="stylesheet" />
 
-    <script src="reorient.js"></script>
-
-    <script>
-      initUI(MUI);
-
-      let file = false;
-      $(".box")
-      .on("drag dragstart dragend dragover dragenter dragleave drop", function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-      })
-      .on("dragover dragenter", function() {
-        $(".box").addClass("is-dragover");
-      })
-      .on("dragleave dragend drop", function() {
-        $(".box").removeClass("is-dragover");
-      })
-      .on("drop", function(e) {
-        file = e.originalEvent.dataTransfer.files;
-        if ($(".box").hasClass("is-uploading")) {
-
-          return false;
-        }
-        $(".box").addClass("is-uploading").removeClass("is-error");
-        e.preventDefault();
-        if (file) {
-          init(file[0])
-            .catch(loadNiftiFailedMessage);
-        }
-      });
-    </script>
+    <script type="module" src="src/main.js"></script>
 
   </body>
 </html>
